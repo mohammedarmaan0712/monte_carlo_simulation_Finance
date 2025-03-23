@@ -4,18 +4,21 @@ import requests
 import json
 import yfinance as yf
 import matplotlib.pyplot as plt
+from sklearn.linear_model import LinearRegression
 
 
 # Your FRED API Key
 API_KEY = "f40a14b7a960cba7b015625ba80b308b"
 
 
-series_id_list = ['^GSPC',  # S&P 500 Index
+series_id_list = [
+    'UNRATE',  # U.S. Unemployment Rate
+    'FEDFUNDS',  # U.S. Federal Funds Rate
+    'BAMLH0A0HYM2',  # High Yield Corporate Bonds
     'UNRATE',  # U.S. Unemployment Rate
     'GDP',  # U.S. GDP Growth
     'CPIAUCNS',  # U.S. Inflation Rate (CPI)
     'GS10',  # U.S. 10-Year Treasury Yield
-    'FEDFUNDS',  # U.S. Federal Funds Rate
     'CONCCONF',  # U.S. Consumer Confidence Index
     'RSXFS',  # U.S. Retail Sales
     'ISM/MAN_PMI',  # U.S. Manufacturing PMI
@@ -93,6 +96,7 @@ def getVariableData():
                 except ValueError:
                     # Handle cases where value is not a float
                     continue
+            return date_values
             todo.append(date_values)
             
     
@@ -100,7 +104,8 @@ def getVariableData():
 
 def getStockData(ticker):
     stock = yf.Ticker(ticker)  # stock data
-    hist = stock.history(period="max")  # Retrieve max of historical data
+    hist = stock.history(start="2000-01-01")  # Retrieve historical data since 2000
+    print (hist)
     return hist  # Convert to dictionary with dates as keys and prices as values
 
 def getCorrelation(variable_data, stock_data, series_id_index):
@@ -116,6 +121,45 @@ def getCorrelation(variable_data, stock_data, series_id_index):
     print(f"Correlation between {series_id_list[series_id_index]}  and stock prices: {correlation}")
     return correlation
 
+
+
+'''
+TODO: 
+1. create a function that creates a regression: 
+2. Arrange both stock data and the indicator data 
+3. Create a function to perform a linear regression on the data
+4. Use monte carlo to predict the future values of the indicator data.
+5. Use this indicated data to predict the future values of the stock using regression. 
+'''
+
+def regression(stock_data, variable_data):
+    model = LinearRegression()
+    common_dates = set(variable_data.keys()).intersection(stock_data.index.strftime('%Y-%m-%d'))
+    variable_values = [variable_data[date] for date in common_dates]
+    stock_values = [stock_data.loc[date, "Close"] for date in common_dates]
+
+    X = np.array(variable_values).reshape(-1, 1)  # Independent variable
+    Y = np.array(stock_values)  # Dependent variable
+
+    model.fit(X, Y)
+    plt.scatter(variable_values, stock_values, color='blue', alpha=0.5, label="Data Points")
+    plt.plot(X, model.predict(X), color='red', label="Regression Line")
+    plt.xlabel("Indicator Values")
+    plt.ylabel("Stock Prices")
+    plt.legend()
+    plt.show()  # Show the scatter plot
+    coef, intercept = model.coef_, model.intercept_  # Get the coefficients and intercept of the regression line
+    print(f"Regression Coefficient: {coef}")
+    print(f"Intercept: {intercept}")
+    # Use the model to predict future values
+    future_values = np.array(float(input("future indicator value:"))).reshape(-1, 1)
+    future_values = model.predict(future_values)  # Predict future stock values based on the model
+    #print(model.predict(np.array(future_values)))  # Predict future values based on the model
+    # Predict future values for the stock based on the variable data
+    return future_values
+
+
+
 def main():
     # Get variable data from FRED
     variable_data = getVariableData()
@@ -126,16 +170,25 @@ def main():
         ticker = '^GSPC'  # Default to S&P 500 if no input is given
     stock_data = getStockData(ticker)  # S&P 500 Index
     
+
     # Calculate correlation
     correlations = []
     i=0
-    for data in variable_data:
+    '''for data in variable_data:
         correlation = getCorrelation(data, stock_data, i)
         correlations.append(correlation)
         i+=1
-        print(f"Correlation: {correlation}")
+        print(f"Correlation: {correlation}")'''
+    '''for data in variable_data:
+        prediction = regression(stock_data, data)
+        i+=1
+        print(f"Prediction: {prediction} for {series_id_list[i]}")'''
+    prediction = regression(stock_data, variable_data)
+    i+=1
+    print(f"Prediction: {prediction} for {series_id_list[i]}")
+    
+    
     # Print all correlations
-
 
 if __name__ == "__main__":
     main()
