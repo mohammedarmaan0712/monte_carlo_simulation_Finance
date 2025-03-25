@@ -82,8 +82,23 @@ def main():
     }
     correlation = np.corrcoef( [data['stock'] for data in structured_data.values()], [data['indicator'] for data in structured_data.values()] )[0, 1]
     print(f"Correlation between {series_id} and {ticker}: {correlation}")
-    plt.plot(list(structured_data.keys()), [data['stock']*3 for data in structured_data.values()], color='blue', label='Stock Price')
-    plt.plot(list(structured_data.keys()), [data['indicator'] for data in structured_data.values()], color='red', label='Indicator Value')
+
+    plt.plot([data['indicator'] for data in structured_data.values()], [data['stock'] for data in structured_data.values()], color='blue', label='Stock Price')
+    # Perform linear regression
+    model = LinearRegression()
+    indicator_values = np.array([data['indicator'] for data in structured_data.values()]).reshape(-1, 1)
+    stock_values = np.array([data['stock'] for data in structured_data.values()])
+
+    # Fit the model
+    model.fit(indicator_values, stock_values)
+
+    # Plot the regression line
+    plt.plot(indicator_values, model.predict(indicator_values), color='red', label='Regression Line')
+    plt.xlabel('Indicator Value')
+    plt.ylabel('Stock Price')
+    plt.title('Linear Regression of Stock Price vs Indicator')
+    plt.legend()
+    #plt.plot(list(structured_data.keys()), [data['indicator'] for data in structured_data.values()], color='red', label='Indicator Value')
     plt.show()
     return
     for date in structured_data:
